@@ -17,6 +17,50 @@ col = db["restaurants"]
 # Flask endpoints
 ##################
 
+@flask_app.route('/', methods=['GET'])
+def get_all_menu():
+    db = mongo_client.menu.restaurants
+    result = list(db.find({}, {'_id': 0}))
+    return flask.jsonify(result)
+
+@flask_app.route('/<restaurant_id>', methods=['GET'])
+def get_a_restaurant(restaurant_id):
+    db = mongo_client.menu.restaurants
+    result = list(db.find({'id': int(restaurant_id)}, {'_id': 0}))
+    return flask.jsonify(result)
+
+@flask_app.route('/<restaurant_id>/<food_id>', methods=['GET'])
+def get_a_food(restaurant_id, food_id):
+    db = mongo_client.menu.restaurants
+    result = list(db.find({'id': int(restaurant_id)}, {'_id': 0}))[0]['food']
+    result = [food for food in result if food['id'] == int(food_id)]
+    if not result:
+        return {'error': 'food not found'}, 404
+    return result[0], 200
+
+@flask_app.route('/<restaurant_id>', methods=['POST'])
+def add_food(restaurant_id):
+    lastid = 0
+    food_name = flask.request.args.get('food_name')
+    food_price = flask.request.args.get('food_price')
+    #new food
+    foodresult = col.find_one({"id": int(restaurant_id)})
+    print(foodresult,flush=True)
+    query = {"id" : int(restaurant_id) }
+    result = list(col.find({'id': int(restaurant_id)}, {'_id': 0}))[0]['food']
+    for food in result:
+        if food['id']>lastid:
+            lastid = food['id']
+    foodresult["food"].append({'id':lastid+1, 'name':food_name, 'price':int(food_price)})
+    col.replace_one( query, foodresult )
+
+def delete_food(message):
+    load = json.loads(message['data'])
+    restaurant_id = load['restaurant_id']
+    food_id = load['food_id']
+    col.update( { "id" : int(restaurant_id) }, 
+                 { "$pull" : { "food" : { "id" : int(food_id)}}})
+
 
 if __name__ == '__main__':
     redis_pubsub = redis_conn.pubsub()
