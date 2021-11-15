@@ -53,6 +53,7 @@ def add_food(restaurant_id):
             lastid = food['id']
     foodresult["food"].append({'id':lastid+1, 'name':food_name, 'price':int(food_price)})
     col.replace_one( query, foodresult )
+    return {'food_id': lastid+1}, 201
 
 def delete_food(message):
     load = json.loads(message['data'])
